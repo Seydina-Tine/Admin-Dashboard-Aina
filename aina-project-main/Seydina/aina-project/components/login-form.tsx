@@ -57,6 +57,7 @@ export function LoginForm({
                   placeholder="m@example.com"
                   {...register("email")}
                   required
+                  className="text-base md:text-lg p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
                 
               </div>
@@ -70,15 +71,12 @@ export function LoginForm({
                     Forgot your password?
                   </a>
                 </div>
-                <Input id="password" type="password" required  {...register("password")} />
+                <Input id="password" type="password" required  {...register("password")} className="text-base md:text-lg p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"/>
                 {errors.password && <p role="alert" className="text-red-700">{errors?.password?.message}</p>}
               </div>
               <div className="flex flex-col gap-3">
-                <Button type="submit" className="w-full">
+                <Button type="submit" className="w-full bg-blue-500 hover:bg-blue-600 text-white">
                   Login
-                </Button>
-                <Button variant="outline" className="w-full">
-                  Login with Google
                 </Button>
               </div>
             </div>
