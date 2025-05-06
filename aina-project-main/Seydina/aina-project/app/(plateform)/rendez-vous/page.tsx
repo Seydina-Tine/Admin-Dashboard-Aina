@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow
 } from "@/components/ui/table"
@@ -12,56 +12,48 @@ import {
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 
-
 type Patient = {
-  id: string
+  id: number
   nom: string
   prenom: string
 }
 
 type RendezVous = {
-  id: string
-  patientId: string
+  id?: number
+  patientId: number
   date: string
   motif: string
   statut: "à venir" | "terminé" | "annulé"
 }
 
-const patients: Patient[] = [
-  { id: "1", nom: "Dupont", prenom: "Marie" },
-  { id: "2", nom: "Martin", prenom: "Jean" }
-]
-
-const initialRdv: RendezVous[] = [
-  {
-    id: "a1",
-    patientId: "1",
-    date: "2025-05-01T14:00",
-    motif: "Suivi post-opératoire",
-    statut: "à venir"
-  },
-  {
-    id: "b2",
-    patientId: "2",
-    date: "2025-04-20T10:30",
-    motif: "Bilan annuel",
-    statut: "terminé"
-  }
-]
-
 export default function RendezVousPage() {
-  const [rendezVous, setRendezVous] = useState(initialRdv)
+  const [patients, setPatients] = useState<Patient[]>([])
+  const [rendezVous, setRendezVous] = useState<RendezVous[]>([])
   const [search, setSearch] = useState("")
   const [isOpen, setIsOpen] = useState(false)
   const [editing, setEditing] = useState<RendezVous | null>(null)
 
   const [form, setForm] = useState<RendezVous>({
-    id: "",
-    patientId: "",
+    patientId: 0,
     date: "",
     motif: "",
     statut: "à venir"
   })
+
+  useEffect(() => {
+    fetch("http://localhost:9001/auth/users")
+      .then((res) => res.json())
+      .then((data) => {
+        const filtered = data.filter((u: any) =>
+          u.approle?.nomrole === "Bénéficiaire" || u.approle?.nomrole === "Proche Aidant"
+        )
+        setPatients(filtered)
+      })
+
+    fetch("http://localhost:9001/api/rendezvous")
+      .then((res) => res.json())
+      .then((data) => setRendezVous(data))
+  }, [])
 
   const openModal = (rdv?: RendezVous) => {
     if (rdv) {
@@ -69,31 +61,44 @@ export default function RendezVousPage() {
       setForm(rdv)
     } else {
       setEditing(null)
-      setForm({ id: crypto.randomUUID(), patientId: "", date: "", motif: "", statut: "à venir" })
+      setForm({
+        patientId: 0,
+        date: "",
+        motif: "",
+        statut: "à venir"
+      })
     }
     setIsOpen(true)
   }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value })
+    const { name, value } = e.target
+    setForm({ ...form, [name]: name === "patientId" ? parseInt(value) : value })
   }
 
-  const handleSubmit = () => {
-    if (editing) {
-      setRendezVous((prev) => prev.map((r) => (r.id === form.id ? form : r)))
-    } else {
-      setRendezVous((prev) => [...prev, form])
+  const handleSubmit = async () => {
+    try {
+      const res = await fetch("http://localhost:9001/api/rendezvous", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          date: form.date,
+          motif: form.motif,
+          statut: form.statut,
+          beneficiaire: { iduser: form.patientId },
+          prestataire: { iduser: 1 } // Exemple statique
+        })
+      })
+
+      const saved = await res.json()
+      setRendezVous((prev) => [...prev, saved])
+      setIsOpen(false)
+    } catch (err) {
+      console.error("Erreur enregistrement RDV", err)
     }
-    setIsOpen(false)
   }
 
-  const handleDelete = (id: string) => {
-    if (confirm("Supprimer ce rendez-vous ?")) {
-      setRendezVous((prev) => prev.filter((r) => r.id !== id))
-    }
-  }
-
-  const getPatientName = (id: string) => {
+  const getPatientName = (id: number) => {
     const p = patients.find((p) => p.id === id)
     return p ? `${p.prenom} ${p.nom}` : "Inconnu"
   }
@@ -129,7 +134,6 @@ export default function RendezVousPage() {
                 <TableHead>Date</TableHead>
                 <TableHead>Motif</TableHead>
                 <TableHead>Statut</TableHead>
-                <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -139,14 +143,6 @@ export default function RendezVousPage() {
                   <TableCell>{r.date}</TableCell>
                   <TableCell>{r.motif}</TableCell>
                   <TableCell>{r.statut}</TableCell>
-                  <TableCell className="space-x-2">
-                    <Button variant="outline" size="sm" onClick={() => openModal(r)}>
-                      Modifier
-                    </Button>
-                    <Button variant="destructive" size="sm" onClick={() => handleDelete(r.id)}>
-                      Supprimer
-                    </Button>
-                  </TableCell>
                 </TableRow>
               ))}
               {filteredRdv.length === 0 && (
@@ -168,9 +164,12 @@ export default function RendezVousPage() {
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label>Patient</Label>
+              <Label htmlFor="patientId">Patient</Label>
               <select
+                id="patientId"
                 name="patientId"
+                aria-label="Patient"
+                title="Sélectionner un patient"
                 value={form.patientId}
                 onChange={handleInputChange}
                 className="w-full border rounded p-2"
@@ -184,22 +183,31 @@ export default function RendezVousPage() {
               </select>
             </div>
             <div>
-              <Label>Date et heure</Label>
+              <Label htmlFor="date">Date et heure</Label>
               <Input
                 type="datetime-local"
+                id="date"
                 name="date"
                 value={form.date}
                 onChange={handleInputChange}
               />
             </div>
             <div>
-              <Label>Motif</Label>
-              <Input name="motif" value={form.motif} onChange={handleInputChange} />
+              <Label htmlFor="motif">Motif</Label>
+              <Input
+                id="motif"
+                name="motif"
+                value={form.motif}
+                onChange={handleInputChange}
+              />
             </div>
             <div>
-              <Label>Statut</Label>
+              <Label htmlFor="statut">Statut</Label>
               <select
+                id="statut"
                 name="statut"
+                aria-label="Statut du rendez-vous"
+                title="Sélectionner le statut"
                 value={form.statut}
                 onChange={handleInputChange}
                 className="w-full border rounded p-2"

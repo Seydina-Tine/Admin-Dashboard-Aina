@@ -1,44 +1,42 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-
-import { Button } from "@/components/ui/button";
+import { zodResolver } from "@hookform/resolvers/zod";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+} from "@/components/ui/card";
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
-  FormLabel,
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
 const formSchema = z.object({
-  firstName: z.string().min(2, {
-    message: "Username must be at least 2 characters.",
-  }),
-  lastName: z.string().min(2, {
-    message: "Lastname must be at least 2 characters.",
-  }),
-  email: z.string().email({message:"Must be an email"}),
-  password: z.string().min(2, {
-    message: "Password must be at least 2 characters.",
-  }),
-  confirmPassword: z.string().min(2, {
-    message: "Password must be at least 2 characters.",
-  }),
-  numberPermis: z.coerce.number({
-    required_error: "Number permis is required",
-    invalid_type_error: "Number permis must be a number",
-  }),
+  firstName: z.string().min(2),
+  lastName: z.string().min(2),
+  email: z.string().email(),
+  password: z.string().min(4),
+  confirmPassword: z.string().min(4),
+  phone: z.string().min(6),
+  adresse: z.string().min(4),
+  sexe: z.string().min(1),
+  date_naissance: z.string().min(4), // Format YYYY-MM-DD
+  titre_professionel: z.string().min(2),
+  numberPermis: z.coerce.number(),
 });
 
 export default function CreateAccount() {
+  const [photo, setPhoto] = useState<File | null>(null);
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -47,16 +45,56 @@ export default function CreateAccount() {
       email: "",
       password: "",
       confirmPassword: "",
-      numberPermis:0
+      phone: "",
+      adresse: "",
+      sexe: "Masculin",
+      date_naissance: "1990-01-01",
+      titre_professionel: "",
+      numberPermis: 0,
     },
   });
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    console.log(values);
+
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    const formData = new FormData();
+    formData.append("nom", values.lastName);
+    formData.append("prenom", values.firstName);
+    formData.append("id_role", "1"); // Par défaut : rôle 1
+    formData.append("mail", values.email);
+    formData.append("sexe", values.sexe);
+    formData.append("date_naissance", values.date_naissance);
+    formData.append("motpasse", values.password);
+    formData.append("confirmMotpasse", values.confirmPassword);
+    formData.append("adresse", values.adresse);
+    formData.append("tele", values.phone);
+    formData.append("numero_permis", values.numberPermis.toString());
+    formData.append("titre_professionel", values.titre_professionel);
+    formData.append("isFirstlogin", "true");
+
+    if (photo) {
+      formData.append("photoFile", photo);
+    }
+
+    try {
+      const res = await fetch("http://localhost:9001/auth/register", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const errText = await res.text();
+        alert("Échec de l'inscription : " + errText);
+      } else {
+        alert("Inscription réussie !");
+      }
+    } catch (error) {
+      console.error("Erreur réseau :", error);
+      alert("Erreur réseau lors de la création du compte");
+    }
   }
 
   return (
     <div className="flex min-h-svh w-full items-center justify-center p-6 md:p-10">
-      <div className="w-full max-w-sm">
+      <div className="w-full max-w-md">
         <Card>
           <CardHeader>
             <CardTitle className="text-center text-2xl mb-2">
@@ -65,98 +103,50 @@ export default function CreateAccount() {
           </CardHeader>
           <CardContent>
             <Form {...form}>
-              <form
-                onSubmit={form.handleSubmit(onSubmit)}
-                className="space-y-7"
-              >
-                <FormField
-                  control={form.control}
-                  name="numberPermis"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormControl>
-                        <Input
-                          placeholder="Number Permis"
-                          {...field}
-                          required
-                          type="number"
-                          onChange={(e) => field.onChange(e.target.valueAsNumber || "")} 
-                        />
-                      </FormControl>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+                <FormField name="firstName" control={form.control} render={({ field }) => (
+                  <FormItem><FormControl><Input placeholder="First Name" {...field} /></FormControl><FormMessage /></FormItem>
+                )} />
+                <FormField name="lastName" control={form.control} render={({ field }) => (
+                  <FormItem><FormControl><Input placeholder="Last Name" {...field} /></FormControl><FormMessage /></FormItem>
+                )} />
+                <FormField name="email" control={form.control} render={({ field }) => (
+                  <FormItem><FormControl><Input type="email" placeholder="Email" {...field} /></FormControl><FormMessage /></FormItem>
+                )} />
+                <FormField name="password" control={form.control} render={({ field }) => (
+                  <FormItem><FormControl><Input type="password" placeholder="Password" {...field} /></FormControl><FormMessage /></FormItem>
+                )} />
+                <FormField name="confirmPassword" control={form.control} render={({ field }) => (
+                  <FormItem><FormControl><Input type="password" placeholder="Confirm Password" {...field} /></FormControl><FormMessage /></FormItem>
+                )} />
+                <FormField name="phone" control={form.control} render={({ field }) => (
+                  <FormItem><FormControl><Input placeholder="Phone Number" {...field} /></FormControl><FormMessage /></FormItem>
+                )} />
+                <FormField name="adresse" control={form.control} render={({ field }) => (
+                  <FormItem><FormControl><Input placeholder="Adresse" {...field} /></FormControl><FormMessage /></FormItem>
+                )} />
+                <FormField name="sexe" control={form.control} render={({ field }) => (
+                  <FormItem><FormControl><Input placeholder="Sexe (Masculin/Féminin)" {...field} /></FormControl><FormMessage /></FormItem>
+                )} />
+                <FormField name="date_naissance" control={form.control} render={({ field }) => (
+                  <FormItem><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>
+                )} />
+                <FormField name="titre_professionel" control={form.control} render={({ field }) => (
+                  <FormItem><FormControl><Input placeholder="Titre Professionnel" {...field} /></FormControl><FormMessage /></FormItem>
+                )} />
+                <FormField name="numberPermis" control={form.control} render={({ field }) => (
+                  <FormItem><FormControl><Input type="number" placeholder="Numéro Permis" {...field} /></FormControl><FormMessage /></FormItem>
+                )} />
 
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="firstName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormControl>
-                        <Input placeholder="Name" {...field} />
-                      </FormControl>
+                <div>
+                  <label>Photo (optionnelle)</label>
+                  <Input type="file" accept="image/*" onChange={(e) => setPhoto(e.target.files?.[0] || null)} />
+                </div>
 
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="lastName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormControl>
-                        <Input placeholder="Last name" {...field} />
-                      </FormControl>
-
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormControl>
-                        <Input placeholder="Email Adress" {...field} />
-                      </FormControl>
-
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="password"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormControl>
-                        <Input placeholder="password" {...field} type="password" />
-                      </FormControl>
-
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="confirmPassword"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormControl>
-                        <Input placeholder="Confirm Password" {...field} type="password"/>
-                      </FormControl>
-
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <div className="flex justify-between">
+                <div className="flex justify-between pt-3">
                   <Button type="submit">Sign Up</Button>
-                  <Button className="ml-auto">
-                    <Link href="/login">Sign In</Link>
+                  <Button variant="link">
+                    <Link href="/login">Already have an account?</Link>
                   </Button>
                 </div>
               </form>

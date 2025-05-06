@@ -4,7 +4,17 @@ import java.time.Instant;
 import java.util.Date;
 import java.util.List;
 
-import javax.persistence.*;
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.JoinTable;
+import javax.persistence.ManyToMany;
+import javax.persistence.ManyToOne;
+import javax.persistence.Table;
+import javax.persistence.Transient;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonProperty.Access;
@@ -62,16 +72,25 @@ public class Utilisateur {
 
     @Column(name = "is_online")
     private Boolean isOnline = false;
-    
+
     private boolean isFirstlogin;
-    
+
     @ManyToMany
     @JoinTable(
-        name = "UserBeneficaire_Nomfonctionnalite", // Nom de la table d'association
-        joinColumns = @JoinColumn(name = "id_userbeneficiare"), // Colonne correspondant à l'entité actuelle
-        inverseJoinColumns = @JoinColumn(name = "id_fonctionnalite") // Colonne correspondant à l'entité liée
+        name = "UserBeneficaire_Nomfonctionnalite",
+        joinColumns = @JoinColumn(name = "id_userbeneficiare"),
+        inverseJoinColumns = @JoinColumn(name = "id_fonctionnalite")
     )
-    private List<NomFonctionnalite> fonctionnalites; // represente les services pour un utilisateur beneficaire disponible sur un telephone andoid 
+    private List<NomFonctionnalite> fonctionnalites;
+
+    // Ajout de la relation prestataire <-> bénéficiaires
+    @ManyToMany
+    @JoinTable(
+        name = "prestataire_beneficiaire",
+        joinColumns = @JoinColumn(name = "id_prestataire"),
+        inverseJoinColumns = @JoinColumn(name = "id_beneficiaire")
+    )
+    private List<Utilisateur> beneficiaires;
 
     // Getters and Setters
 
@@ -84,22 +103,22 @@ public class Utilisateur {
     }
 
     public boolean isFirstlogin() {
-		return isFirstlogin;
-	}
+        return isFirstlogin;
+    }
 
-	public void setFirstlogin(boolean isFirstlogin) {
-		this.isFirstlogin = isFirstlogin;
-	}
+    public void setFirstlogin(boolean isFirstlogin) {
+        this.isFirstlogin = isFirstlogin;
+    }
 
-	public List<NomFonctionnalite> getFonctionnalites() {
-		return this.fonctionnalites;
-	}
+    public List<NomFonctionnalite> getFonctionnalites() {
+        return this.fonctionnalites;
+    }
 
-	public void setFonctionnalites(List<NomFonctionnalite> fonctionnalites) {
-		this.fonctionnalites = fonctionnalites;
-	}
+    public void setFonctionnalites(List<NomFonctionnalite> fonctionnalites) {
+        this.fonctionnalites = fonctionnalites;
+    }
 
-	public String getNom() {
+    public String getNom() {
         return nom;
     }
 
@@ -227,6 +246,14 @@ public class Utilisateur {
         this.isOnline = isOnline;
     }
 
+    public List<Utilisateur> getBeneficiaires() {
+        return beneficiaires;
+    }
+
+    public void setBeneficiaires(List<Utilisateur> beneficiaires) {
+        this.beneficiaires = beneficiaires;
+    }
+
     // Constructors
 
     public Utilisateur() {
@@ -246,7 +273,7 @@ public class Utilisateur {
         this.adresse = adresse;
         this.tele = tele;
         this.approle = approle;
-        this.isOnline = false;  // Default value
+        this.isOnline = false;
     }
 
     public Utilisateur(String nom, String prenom, String mail, String sexe, Date date_naissance,
@@ -261,6 +288,6 @@ public class Utilisateur {
         this.adresse = adresse;
         this.tele = tele;
         this.approle = approle;
-        this.isOnline = false;  // Default value
+        this.isOnline = false;
     }
 }

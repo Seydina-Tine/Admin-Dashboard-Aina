@@ -1,8 +1,9 @@
 package com.ihm.web;
 
+import java.security.Key;
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -16,7 +17,18 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -36,12 +48,14 @@ import com.ihm.service.AccountService;
 import com.ihm.service.RappelService;
 import com.ihm.service.UtilisateurService;
 
-import org.springframework.web.bind.annotation.CrossOrigin;
-
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.security.Keys;
 @CrossOrigin(origins = "*") // Autoriser les requêtes de toutes les origines
 @RestController
 @RequestMapping("/auth")
 public class AuthController {
+	private static final Key jwtKey = Keys.secretKeyFor(SignatureAlgorithm.HS256);
 
 	@Autowired
 	private AccountService accountService;
@@ -141,6 +155,46 @@ public class AuthController {
 		}
 	}
 
+	@PostMapping("/login")
+	public ResponseEntity<?> login(@RequestBody Map<String, String> request) {
+    String identifier = request.get("mail");
+    String motpasse = request.get("motpasse");
+
+    Optional<Utilisateur> optionalUtilisateur = identifier.contains("@")
+        ? utilisateurRepository.findByMail(identifier)
+        : utilisateurRepository.findByTele(identifier);
+
+    if (optionalUtilisateur.isEmpty()) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(Map.of("error", "Utilisateur introuvable"));
+    }
+
+    Utilisateur utilisateur = optionalUtilisateur.get();
+
+    // Vérification du mot de passe avec BCrypt
+    BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+    if (!encoder.matches(motpasse, utilisateur.getMotpasse())) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(Map.of("error", "Mot de passe incorrect"));
+    }
+
+    // Génération du JWT
+    String jwt = Jwts.builder()
+            .setSubject(identifier)
+            .claim("userId", utilisateur.getIduser())
+            .claim("role", utilisateur.getApprole().getNomrole())
+            .signWith(jwtKey)
+            .compact();
+
+    // Réponse avec token + infos utilisateur
+    Map<String, Object> response = new HashMap<>();
+    response.put("token", jwt);
+    response.put("user", utilisateur);
+
+    return ResponseEntity.ok(response);
+}
+
+
 	@GetMapping("/users")
 	public ResponseEntity<List<Utilisateur>> getAllUsers() {
 		List<Utilisateur> users = accountService.getALLemp();
@@ -223,6 +277,24 @@ public class AuthController {
 		List<Contact> contact = accountService.getContactsByEnvoyer(envoyerId);
 		return ResponseEntity.ok(contact);
 	}
+
+	@GetMapping("/users/by-role")
+	public ResponseEntity<List<Utilisateur>> getUsersByRole(@RequestParam("roleId") int roleId) {
+	List<Utilisateur> users = accountService.getALLemp();
+	List<Utilisateur> filtered = users.stream()
+		.filter(user -> user.getApprole() != null && user.getApprole().getId_role() == roleId)
+		.collect(Collectors.toList());
+	return ResponseEntity.ok(filtered);
+}
+
+
+	/*@PostMapping("/rendezvous")
+	public ResponseEntity<RendezVous> createRendezVous(@RequestBody RendezVous rdv) {
+    RendezVous savedRdv = rendezVousRepository.save(rdv);
+    return ResponseEntity.ok(savedRdv);
+}*/
+
+
 
 	@PostMapping("/send-email")
 	public ResponseEntity<?> sendEmail(@RequestParam("to") String to, @RequestParam("subject") String subject,
