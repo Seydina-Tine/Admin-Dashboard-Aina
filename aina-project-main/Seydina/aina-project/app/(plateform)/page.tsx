@@ -44,6 +44,13 @@ export default function Home() {
         <Button className="mb-4">Ajouter une personne proche aidante</Button>
       </Link>
       <br />
+
+      <Link href="/tableau-de-bord">
+        <Button className="mb-4 bg-blue-600 hover:bg-blue-700">
+          📊 Tableau de Bord
+        </Button>
+      </Link>
+      <br />
       <Button>Modifier profil</Button>
     </div>
   );
