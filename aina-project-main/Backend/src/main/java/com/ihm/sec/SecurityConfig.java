@@ -30,7 +30,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     protected void configure(HttpSecurity http) throws Exception {
         http.csrf().disable();
         http.sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS);
-        http.authorizeRequests().antMatchers("/auth/login","/auth/create-room/**","/api/TransportAdapte/**", "/roles", "/auth/register", "/auth/logout", "/api/call/**", "/api/forgot-password", "/api/healthcare/**", "/api/pharmacy/**", "/api/reset-password", "/rappels/**", "/video-call/**","/auth/user/statutfirstlogin/**","/auth/user/addFonctionnalites/**","/auth/user/Fonctionnalites/**","/actuator/**").permitAll();
+        http.authorizeRequests().antMatchers("/auth/login","/auth/create-room/**","/auth/users","/api/TransportAdapte/**", "/roles", "/auth/register", "/auth/logout", "/api/call/**", "/api/forgot-password", "/api/healthcare/**", "/api/pharmacy/**", "/api/reset-password", "/rappels/**", "/video-call/**","/auth/user/statutfirstlogin/**","/auth/user/addFonctionnalites/**","/auth/user/Fonctionnalites/**","/actuator/**").permitAll();
         http.authorizeRequests().anyRequest().authenticated();
         http.addFilter(new JWTAuthentificationFilter(authenticationManager()));
         http.addFilterBefore(new JWTAuthorizationFilter(), UsernamePasswordAuthenticationFilter.class);

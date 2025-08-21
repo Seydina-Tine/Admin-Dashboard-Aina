@@ -8,169 +8,83 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "react-hot-toast";
 
+type Beneficiary = {
+  id: number;
+  nom: string;
+  prenom: string;
+  mail: string;
+};
+
 export default function AddBeneficiaryForm() {
   const router = useRouter();
-  const [beneficiary, setBeneficiary] = useState({
-    nom: "",
-    prenom: "",
-    mail: "",
-    sexe: "",
-    dateNaissance: "",
-    motpasse: "",
-    confirmMotpasse: "",
-    adresse: "",
-    tele: "",
-    isFirstlogin: true,
-    id_role: 1,
-  });
+  const [beneficiary, setBeneficiary] = useState<Beneficiary | null>(null);
+  const [beneficiaries, setBeneficiaries] = useState<Beneficiary[]>([]);
+  const [showBeneficiaryList, setShowBeneficiaryList] = useState(false);
 
-  const [procheAidants, setProcheAidants] = useState([
-    {
-      nom: "",
-      prenom: "",
-      mail: "",
-      sexe: "",
-      dateNaissance: "",
-      motpasse: "",
-      confirmMotpasse: "",
-      adresse: "",
-      tele: "",
-      isFirstlogin: true,
-      id_role: 2,
-    },
-  ]);
-
-  const handleChange = (e, index = null) => {
-    const { name, value } = e.target;
-    if (index === null) {
-      setBeneficiary({ ...beneficiary, [name]: value });
-    } else {
-      const updated = [...procheAidants];
-      updated[index][name] = value;
-      setProcheAidants(updated);
-    }
-  };
-
-  const handleAddProche = () => {
-    setProcheAidants([
-      ...procheAidants,
-      {
-        nom: "",
-        prenom: "",
-        mail: "",
-        sexe: "",
-        dateNaissance: "",
-        motpasse: "",
-        confirmMotpasse: "",
-        adresse: "",
-        tele: "",
-        isFirstlogin: true,
-        id_role: 2,
-      },
-    ]);
-  };
-
-  const handleSubmit = async () => {
+  // Fonction pour récupérer les bénéficiaires existants
+  const fetchBeneficiaries = async () => {
     try {
-      // Enregistrer le bénéficiaire
-      const resBenef = await fetch("http://localhost:9001/auth/register", {
-        method: "POST",
-        body: new URLSearchParams(beneficiary),
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-      });
-
-      if (!resBenef.ok) throw new Error("Erreur lors de l'ajout du bénéficiaire");
-
-      const newBenef = await resBenef.json();
-
-      // Enregistrer chaque proche aidant
-      for (const proche of procheAidants) {
-        const resProche = await fetch("http://localhost:9001/auth/register", {
-          method: "POST",
-          body: new URLSearchParams(proche),
-          headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-          },
-        });
-
-        if (!resProche.ok) throw new Error("Erreur lors de l'ajout d'un proche aidant");
-
-        const newProche = await resProche.json();
-
-        // Relier le proche au bénéficiaire dans le backend (via /contacts ou autre)
-        await fetch("http://localhost:9001/auth/contacts", {
-          method: "POST",
-          body: new URLSearchParams({
-            senderId: newBenef.iduser.toString(),
-            receiverId: newProche.iduser.toString(),
-          }),
-          headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-          },
-        });
-      }
-
-      toast.success("Bénéficiaire et proches ajoutés avec succès");
-      router.push("/beneficiary-list");
+      const res = await fetch("http://localhost:9001/beneficiaries");
+      if (!res.ok) throw new Error("Erreur lors de la récupération des bénéficiaires");
+      const data = await res.json();
+      setBeneficiaries(data);
     } catch (error) {
-      toast.error("Une erreur s'est produite lors de l'enregistrement");
+      toast.error("Impossible de récupérer les bénéficiaires");
     }
+  };
+
+  // Afficher la liste des bénéficiaires
+  const handleShowBeneficiaries = () => {
+    fetchBeneficiaries();
+    setShowBeneficiaryList(true);
+  };
+
+  // Sélectionner un bénéficiaire
+  interface HandleSelectBeneficiary {
+    (selectedBeneficiary: Beneficiary): void;
+  }
+
+  const handleSelectBeneficiary: HandleSelectBeneficiary = (selectedBeneficiary) => {
+    setBeneficiary(selectedBeneficiary);
+    setShowBeneficiaryList(false);
+    toast.success("Bénéficiaire sélectionné");
   };
 
   return (
     <div className="p-6 space-y-6">
-      <Card>
-        <CardContent className="space-y-4 p-4">
-          <h2 className="text-xl font-bold">Ajouter un bénéficiaire</h2>
-          {Object.entries(beneficiary).map(([key, val]) => (
-            key !== "id_role" &&
-            key !== "isFirstlogin" && (
-              <div key={key}>
-                <Label>{key}</Label>
-                <Input
-                  name={key}
-                  type={key.includes("date") ? "date" : "text"}
-                  value={val}
-                  onChange={handleChange}
-                />
-              </div>
-            )
-          ))}
-        </CardContent>
-      </Card>
+      <Button variant="outline" onClick={handleShowBeneficiaries}>
+        Ajouter un bénéficiaire
+      </Button>
 
-      {procheAidants.map((proche, index) => (
-        <Card key={index}>
-          <CardContent className="space-y-4 p-4">
-            <h3 className="text-lg font-semibold">
-              Proche aidant #{index + 1}
-            </h3>
-            {Object.entries(proche).map(([key, val]) => (
-              key !== "id_role" &&
-              key !== "isFirstlogin" && (
-                <div key={key}>
-                  <Label>{key}</Label>
-                  <Input
-                    name={key}
-                    type={key.includes("date") ? "date" : "text"}
-                    value={val}
-                    onChange={(e) => handleChange(e, index)}
-                  />
-                </div>
-              )
+      {showBeneficiaryList && (
+        <div className="p-4 border rounded">
+          <h3 className="text-lg font-semibold">Sélectionnez un bénéficiaire</h3>
+          <ul>
+            {beneficiaries.map((b) => (
+              <li key={b.id} className="flex justify-between items-center">
+                <span>{b.nom} {b.prenom}</span>
+                <Button
+                  variant="outline"
+                  onClick={() => handleSelectBeneficiary(b)}
+                >
+                  Sélectionner
+                </Button>
+              </li>
             ))}
+          </ul>
+        </div>
+      )}
+
+      {beneficiary && (
+        <Card>
+          <CardContent className="space-y-4 p-4">
+            <h2 className="text-xl font-bold">Bénéficiaire sélectionné</h2>
+            <p>Nom : {beneficiary.nom}</p>
+            <p>Prénom : {beneficiary.prenom}</p>
+            <p>Email : {beneficiary.mail}</p>
           </CardContent>
         </Card>
-      ))}
-
-      <Button variant="outline" onClick={handleAddProche}>
-        Ajouter un proche aidant
-      </Button>
-      <Button className="ml-4" onClick={handleSubmit}>
-        Enregistrer
-      </Button>
+      )}
     </div>
   );
 }

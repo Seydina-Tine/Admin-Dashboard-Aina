@@ -22,17 +22,16 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
 const formSchema = z.object({
+  numberPermis: z.coerce.number(),
   firstName: z.string().min(2),
   lastName: z.string().min(2),
   email: z.string().email(),
   password: z.string().min(4),
   confirmPassword: z.string().min(4),
   phone: z.string().min(6),
-  adresse: z.string().min(4),
-  sexe: z.string().min(1),
   date_naissance: z.string().min(4), // Format YYYY-MM-DD
-  titre_professionel: z.string().min(2),
-  numberPermis: z.coerce.number(),
+  //titre_professionel: z.string().min(2),
+  
 });
 
 export default function CreateAccount() {
@@ -40,35 +39,30 @@ export default function CreateAccount() {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      numberPermis: 0,
       firstName: "",
       lastName: "",
       email: "",
       password: "",
       confirmPassword: "",
-      phone: "",
-      adresse: "",
-      sexe: "Masculin",
-      date_naissance: "1990-01-01",
-      titre_professionel: "",
-      numberPermis: 0,
+      //date_naissance: "1990-01-01",
+      //titre_professionel: "",
+      
     },
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     const formData = new FormData();
+    formData.append("numero_permis", values.numberPermis.toString());
     formData.append("nom", values.lastName);
     formData.append("prenom", values.firstName);
     formData.append("id_role", "1"); // Par défaut : rôle 1
     formData.append("mail", values.email);
-    formData.append("sexe", values.sexe);
-    formData.append("date_naissance", values.date_naissance);
+   // formData.append("date_naissance", values.date_naissance);
     formData.append("motpasse", values.password);
-    formData.append("confirmMotpasse", values.confirmPassword);
-    formData.append("adresse", values.adresse);
-    formData.append("tele", values.phone);
-    formData.append("numero_permis", values.numberPermis.toString());
-    formData.append("titre_professionel", values.titre_professionel);
-    formData.append("isFirstlogin", "true");
+    formData.append("tel", values.phone);
+   
+    
 
     if (photo) {
       formData.append("photoFile", photo);
@@ -104,6 +98,9 @@ export default function CreateAccount() {
           <CardContent>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+                <FormField name="numberPermis" control={form.control} render={({ field }) => (
+                  <FormItem><FormControl><Input type="number" placeholder="Numéro Permis" {...field} /></FormControl><FormMessage /></FormItem>
+                )} />
                 <FormField name="firstName" control={form.control} render={({ field }) => (
                   <FormItem><FormControl><Input placeholder="First Name" {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
@@ -122,21 +119,10 @@ export default function CreateAccount() {
                 <FormField name="phone" control={form.control} render={({ field }) => (
                   <FormItem><FormControl><Input placeholder="Phone Number" {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
-                <FormField name="adresse" control={form.control} render={({ field }) => (
-                  <FormItem><FormControl><Input placeholder="Adresse" {...field} /></FormControl><FormMessage /></FormItem>
-                )} />
-                <FormField name="sexe" control={form.control} render={({ field }) => (
-                  <FormItem><FormControl><Input placeholder="Sexe (Masculin/Féminin)" {...field} /></FormControl><FormMessage /></FormItem>
-                )} />
-                <FormField name="date_naissance" control={form.control} render={({ field }) => (
-                  <FormItem><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>
-                )} />
-                <FormField name="titre_professionel" control={form.control} render={({ field }) => (
-                  <FormItem><FormControl><Input placeholder="Titre Professionnel" {...field} /></FormControl><FormMessage /></FormItem>
-                )} />
-                <FormField name="numberPermis" control={form.control} render={({ field }) => (
-                  <FormItem><FormControl><Input type="number" placeholder="Numéro Permis" {...field} /></FormControl><FormMessage /></FormItem>
-                )} />
+                
+                
+                
+              
 
                 <div>
                   <label>Photo (optionnelle)</label>

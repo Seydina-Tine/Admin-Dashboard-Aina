@@ -47,6 +47,7 @@ import com.ihm.entites.Utilisateur;
 import com.ihm.service.AccountService;
 import com.ihm.service.RappelService;
 import com.ihm.service.UtilisateurService;
+import com.ihm.entites.RendezVous;
 
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
